@@ -1,15 +1,21 @@
 from flask import Flask
-from routes.auth  import auth_bp
-from models import db
-from flask_mail import Mail
+from config import Config
+from extensions import db, mail
+from routes.auth import auth_bp
 
-app = Flask(__name__)
-mail = Mail()
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:Navibu161308_@localhost/NavibuDB"
-db.init_app(app)
-mail.init_app(app)
-app.register_blueprint(auth_bp)
+    db.init_app(app)
+    mail.init_app(app)
+
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+
+    return app
+
+app = create_app()
+
 
 if __name__ == "__main__":
     app.run(debug=True)
