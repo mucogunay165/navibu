@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:navibuapp/screens/signup_screen.dart';
-import 'package:navibuapp/screens/verification_screen.dart';
 
 void main() {
   runApp(const MyApp());

@@ -22,7 +22,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
       message = "";
     });
 
-    final url = Uri.parse("http://127.0.0.1:5000/verify");
+    final url = Uri.parse("http://127.0.0.1:5000/auth/verify");
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},

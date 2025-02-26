@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
 import 'package:navibuapp/screens/verification_screen.dart';
+import 'package:navibuapp/screens/login_screen.dart'; 
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -21,7 +21,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       message = "";
     });
 
-    final url = Uri.parse("http://127.0.0.1:5000/register");
+    final url = Uri.parse("http://127.0.0.1:5000/auth/register");
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
@@ -40,13 +40,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() {
         message = data["message"] ?? "Kayıt başarılı!";
       });
-      // Kayıt başarılıysa login ekranına veya başka bir ekrana yönlendirebilirsin
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VerificationScreen(email: emailController.text),
-          ),
-        );
+      // Kullanıcıyı doğrulama ekranına yönlendir
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VerificationScreen(email: emailController.text),
+        ),
+      );
     } else {
       final data = jsonDecode(response.body);
       setState(() {
@@ -82,7 +82,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: Text("Kayıt Ol"),
                   ),
             SizedBox(height: 20),
-            Text(message),
+            Text(message, style: TextStyle(color: Colors.red)),
+            SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LoginScreen(), // Burada login ekranını açıyoruz
+                  ),
+                );
+              },
+              child: Text(
+                "Zaten hesabın var mı? Giriş Yap",
+                style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+              ),
+            ),
           ],
         ),
       ),
