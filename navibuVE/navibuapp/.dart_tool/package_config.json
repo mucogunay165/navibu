@@ -273,7 +273,7 @@
     },
     {
       "name": "web",
-      "rootUri": "file:///Users/mucahitgunay/.pub-cache/hosted/pub.dev/web-1.1.0",
+      "rootUri": "file:///Users/mucahitgunay/.pub-cache/hosted/pub.dev/web-1.1.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -290,7 +290,7 @@
       "languageVersion": "3.7"
     }
   ],
-  "generated": "2025-02-25T18:54:51.325252Z",
+  "generated": "2025-02-27T14:29:22.322221Z",
   "generator": "pub",
   "generatorVersion": "3.7.0",
   "flutterRoot": "file:///opt/homebrew/Caskroom/flutter/3.29.0/flutter",
