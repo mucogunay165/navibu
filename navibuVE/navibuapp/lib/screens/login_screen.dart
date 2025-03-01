@@ -1,8 +1,11 @@
+// lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'signup_screen.dart';
+import 'package:navibuapp/widgets/navibu_logo.dart';
+import 'package:navibuapp/screens/signup_screen.dart';
+import 'package:navibuapp/screens/home_screen.dart';
+import 'package:navibuapp/screens/route_selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -14,25 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
   String message = "";
-  bool rememberMe = false; // "Beni Hatırla" seçeneği
-
-  @override
-  void initState() {
-    super.initState();
-    loadSavedUser(); // Önceden kaydedilen kullanıcıyı kontrol et
-  }
-
-  // SharedPreferences'tan kullanıcı verisini al
-  Future<void> loadSavedUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      rememberMe = prefs.getBool('rememberMe') ?? false;
-      if (rememberMe) {
-        emailController.text = prefs.getString('email') ?? "";
-        passwordController.text = prefs.getString('password') ?? "";
-      }
-    });
-  }
 
   Future<void> loginUser() async {
     setState(() {
@@ -40,43 +24,61 @@ class _LoginScreenState extends State<LoginScreen> {
       message = "";
     });
 
-    final url = Uri.parse("http://127.0.0.1:5000/auth/login");
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "email": emailController.text,
-        "password": passwordController.text,
-      }),
-    );
+    try {
+      // Replace with your computer's actual IP address
+      final url = Uri.parse("http://127.0.0.1:5000/auth/login");
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": emailController.text,
+          "password": passwordController.text,
+        }),
+      );
 
-    setState(() {
-      isLoading = false;
-    });
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
       setState(() {
-        message = data["message"] ?? "Giriş başarılı!";
+        isLoading = false;
       });
 
-      if (rememberMe) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('rememberMe', true);
-        await prefs.setString('email', emailController.text);
-        await prefs.setString('password', passwordController.text);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final userId = data["user_id"];
+        
+        // Check if user has selected routes
+        final checkUrl = Uri.parse("http://127.0.0.1:5000/user/check_route_selection/$userId");
+        final checkResponse = await http.get(checkUrl);
+        
+        if (checkResponse.statusCode == 200) {
+          final checkData = jsonDecode(checkResponse.body);
+          
+          if (checkData['has_selected_routes']) {
+            // User has already selected routes, go to home screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(userId: userId),
+              ),
+            );
+          } else {
+            // User needs to select routes first
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RouteSelectionScreen(userId: userId),
+              ),
+            );
+          }
+        }
       } else {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('rememberMe');
-        await prefs.remove('email');
-        await prefs.remove('password');
+        final data = jsonDecode(response.body);
+        setState(() {
+          message = data["error"] ?? "Giriş başarısız!";
+        });
       }
-
-      Navigator.pushReplacementNamed(context, "/home");
-    } else {
-      final data = jsonDecode(response.body);
+    } catch (e) {
       setState(() {
-        message = data["message"] ?? "Giriş başarısız!";
+        message = "Bağlantı hatası: $e";
+        isLoading = false;
       });
     }
   }
@@ -84,53 +86,97 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Giriş Yap")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(labelText: "E-posta"),
-            ),
-            TextField(
-              controller: passwordController,
-              decoration: InputDecoration(labelText: "Şifre"),
-              obscureText: true,
-            ),
-            Row(
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Checkbox(
-                  value: rememberMe,
-                  onChanged: (bool? value) {
-                    setState(() {
-                      rememberMe = value ?? false;
-                    });
-                  },
+                const SizedBox(height: 40),
+                // Logo
+                const Center(child: NavibuLogo()),
+                const SizedBox(height: 40),
+                // Title
+                Text(
+                  "Navibu'ya Hoş Geldiniz",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
                 ),
-                Text("Beni Hatırla"),
+                const SizedBox(height: 20),
+                // Email field
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    labelText: "E-posta",
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                // Password field
+                TextField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(
+                    labelText: "Şifre",
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 24),
+                // Login button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : loginUser,
+                    child: isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text("Giriş Yap"),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Error message
+                if (message.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      message,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                // Register link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Hesabınız yok mu?"),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SignUpScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text("Kayıt Ol"),
+                    ),
+                  ],
+                ),
               ],
             ),
-            SizedBox(height: 20),
-            isLoading
-                ? CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: loginUser,
-                    child: Text("Giriş Yap"),
-                  ),
-            SizedBox(height: 20),
-            Text(message),
-            SizedBox(height: 20),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SignUpScreen()),
-                );
-              },
-              child: Text("Hesabın yok mu? Kayıt Ol"),
-            ),
-          ],
+          ),
         ),
       ),
     );

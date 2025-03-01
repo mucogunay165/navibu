@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
-from backend.models import db, User, Route, user_routes
+from models.user import User
+from models.route import Route, user_routes
+from extensions import db
 
 user_routes_bp = Blueprint('user_routes', __name__)
 
@@ -27,3 +29,44 @@ def get_favorite_routes(user_id):
     favorite_routes = [{"id": r.id, "name": r.route_short_name} for r in user.favorite_routes]
     
     return jsonify(favorite_routes), 200
+
+@user_routes_bp.route('/user/<int:user_id>/routes', methods=['GET'])
+def get_user_routes(user_id):
+    """Get user's selected routes"""
+    user = User.query.get_or_404(user_id)
+    routes = [route.to_dict() for route in user.routes]
+    return jsonify({
+        'routes': routes,
+        'has_selected_routes': len(routes) > 0
+    })
+
+@user_routes_bp.route('/user/<int:user_id>/routes', methods=['POST'])
+def update_user_routes(user_id):
+    """Update user's route selections"""
+    user = User.query.get_or_404(user_id)
+    data = request.json
+    route_ids = data.get('route_ids', [])
+    
+    # Clear existing routes
+    user.routes = []
+    
+    # Add new routes
+    for route_id in route_ids:
+        route = Route.query.get(route_id)
+        if route:
+            user.routes.append(route)
+    
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Routes updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@user_routes_bp.route('/routes', methods=['GET'])
+def get_all_routes():
+    """Get all available routes"""
+    routes = Route.query.all()
+    return jsonify({
+        'routes': [route.to_dict() for route in routes]
+    })

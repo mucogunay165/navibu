@@ -1,6 +1,9 @@
+// lib/screens/verification_screen.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:navibuapp/widgets/navibu_logo.dart';
+import 'package:navibuapp/screens/login_screen.dart';
 
 class VerificationScreen extends StatefulWidget {
   final String email;
@@ -22,31 +25,46 @@ class _VerificationScreenState extends State<VerificationScreen> {
       message = "";
     });
 
-    final url = Uri.parse("http://127.0.0.1:5000/auth/verify");
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "email": widget.email,
-        "code": codeController.text,
-      }),
-    );
+    try {
+      // Replace with your computer's actual IP address
+      final url = Uri.parse("http://192.168.1.X:5000/auth/verify");
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": widget.email,
+          "code": codeController.text,
+        }),
+      );
 
-    setState(() {
-      isLoading = false;
-    });
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
       setState(() {
-        message = data["message"] ?? "Doğrulama başarılı!";
+        isLoading = false;
       });
-      // Burada ana sayfaya veya başka bir ekrana yönlendirebilirsin
-      // Navigator.pushReplacement(...)
-    } else {
-      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Show success message with timer
+        setState(() {
+          message = "Doğrulama başarılı! Giriş ekranına yönlendiriliyorsunuz...";
+        });
+        
+        // Navigate to login after delay
+        Future.delayed(Duration(seconds: 2), () {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+            (route) => false,
+          );
+        });
+      } else {
+        final data = jsonDecode(response.body);
+        setState(() {
+          message = data["message"] ?? "Doğrulama başarısız!";
+        });
+      }
+    } catch (e) {
       setState(() {
-        message = data["message"] ?? "Doğrulama başarısız!";
+        message = "Bağlantı hatası: $e";
+        isLoading = false;
       });
     }
   }
@@ -54,33 +72,81 @@ class _VerificationScreenState extends State<VerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Doğrulama Kodu Gir"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Text("E-postana gelen 6 haneli kodu gir:"),
-            SizedBox(height: 10),
-            TextField(
-              controller: codeController,
-              maxLength: 6,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: "123456",
-              ),
-            ),
-            SizedBox(height: 20),
-            isLoading
-                ? CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: verifyCode,
-                    child: Text("Doğrula"),
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                // Logo
+                const Center(child: NavibuLogo()),
+                const SizedBox(height: 40),
+                // Title
+                Text(
+                  "Hesabınızı Doğrulayın",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
                   ),
-            SizedBox(height: 20),
-            Text(message),
-          ],
+                ),
+                const SizedBox(height: 20),
+                // Instructions
+                Text(
+                  "${widget.email} adresine gönderilen 6 haneli doğrulama kodunu giriniz.",
+                  style: const TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 30),
+                // Code field
+                TextField(
+                  controller: codeController,
+                  decoration: const InputDecoration(
+                    labelText: "Doğrulama Kodu",
+                    prefixIcon: Icon(Icons.pin),
+                  ),
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 24, letterSpacing: 8),
+                ),
+                const SizedBox(height: 24),
+                // Verify button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : verifyCode,
+                    child: isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text("Doğrula"),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Message
+                if (message.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        color: message.contains("başarılı") ? Colors.green : Colors.red,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

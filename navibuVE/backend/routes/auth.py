@@ -1,8 +1,7 @@
 import datetime
 from flask import Flask,Blueprint, request, jsonify
-from flask_mail import Mail
 from werkzeug.security import generate_password_hash, check_password_hash
-from models.user import db, User
+from models.user import User
 from extensions import db, mail
 
 auth_bp = Blueprint("auth",__name__)
@@ -53,7 +52,7 @@ def login():
     data = request.json
     user = User.query.filter_by(email=data['email']).first()
 
-    if not user or not check_password_hash(user.password, data['password']):
+    if not user or not check_password_hash(user.password_hash, data['password']):
         return jsonify({"error": "Invalid credentials"}), 401
 
     return jsonify({"message": "Login successful", "user_id": user.id}), 200
